@@ -40,6 +40,11 @@ namespace PureREST
             save();
         }
 
+        public bool doesKeyExist(string key)
+        {
+            return keymanager.keys.ContainsKey(key);
+        }
+
         public void addAPIEndPoint(string actionURL, Func<Dictionary<string, string>, string> action, params int[] permissions)
         {
             if (!actionURL.StartsWith('/'))
@@ -60,9 +65,9 @@ namespace PureREST
 
         }
 
-        public void addKey(string key, int requestsPerSec, int requestsPerMin, float contingent, string permissions, string comment = "")
+        public void addKey(string key, int requestsPerSec, int requestsPerMin, float contingent, string permissions, string comment = "", int secondsValid = -1)
         {
-            keymanager.addKey(new Keys.HttpKey()
+            var k = new Keys.HttpKey()
             {
                 key = key,
                 created = DateTime.Now,
@@ -71,7 +76,15 @@ namespace PureREST
                 contingent = contingent,
                 privileges = permissions,
                 comments = comment
-            });
+            };
+
+            if(secondsValid != -1)
+            {
+                k.expired = k.created + TimeSpan.FromSeconds(secondsValid);
+            }
+
+            keymanager.addKey(k);
+
             Console.WriteLine("added key: " + key);
             save();
         }
@@ -132,6 +145,10 @@ namespace PureREST
                     //Console.WriteLine("Checking: " + action.Key);
                     if (action.Key == actionurl)
                     {
+                        if(!query.ContainsKey("apikey"))
+                        {
+                            break;
+                        }
                         if (!checkPermissions(action.Value.permissions.ToArray(), query["apikey"]))
                         {
                             break;
